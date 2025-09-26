@@ -42,7 +42,6 @@ body {
   display:inline-block; font-size:3em; opacity:0;
   animation:showPuzzle 2s forwards, fadeOutPuzzle 2s forwards;
   animation-delay:5s, 9s;
-  text-align:center;
 }
 .number {
   display:inline-block; font-size:3em; opacity:0; margin-left:10px;
@@ -89,7 +88,7 @@ body {
 /* 謎タイトル */
 .puzzle2 {
   position:fixed; top:10%; left:50%; transform:translateX(-50%);
-  font-size:2.5em; opacity:0; transition:opacity 1s ease;
+  font-size:3em; opacity:0; transition:opacity 1s ease;
 }
 
 /* 文字入力マス */
@@ -339,7 +338,7 @@ let allPassed = false;
 
 function setPuzzleTitle(idx) {
   const marks = ["❶","❷","❸"];
-  puzzle2.textContent = "MISSION " + marks[idx-1];
+  puzzle2.textContent = "MISSION" + marks[idx-1];
   numberSpan.textContent = marks[idx-1];
 }
 setPuzzleTitle(puzzleIndex);
