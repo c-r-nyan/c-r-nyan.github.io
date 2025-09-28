@@ -515,5 +515,15 @@ $(document).on('touchend','#kb_key_switch,#kb_key_bs',function(e){
   $(e.currentTarget).removeClass('gray_for_touch');
 });
 </script>
+<script>
+let lastTouchEnd = 0;
+document.addEventListener('touchend', function (event) {
+  let now = Date.now();
+  if (now - lastTouchEnd <= 300) {
+    event.preventDefault(); // ダブルタップズーム防止
+  }
+  lastTouchEnd = now;
+}, false);
+</script>
 </body>
 </html>
