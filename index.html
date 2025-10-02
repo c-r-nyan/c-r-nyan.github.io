@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=yes">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
 <title>海底迷宮</title>
 <style>
 /* 基本スタイル */
@@ -21,8 +21,8 @@ body {
     -khtml-user-select: none;
     touch-action: none;
 
-    /* 背景画像に変更 */
-    background: black;url('images/underwater.jpg') no-repeat center center fixed;    
+    /* 背景画像に変更（修正済） */
+    background: black; url('images/underwater.jpg') no-repeat center center fixed;
     background-size: cover;
     color: white;
 
@@ -33,21 +33,35 @@ body {
   text-align:center; 
   position: relative; 
 }
+
+/* ウェルカムは自動で始まらない -> .start を付けて開始 */
 .welcome {
   font-size:2.5em; opacity:0;
   text-shadow:2px 2px 3px #008cff, -2px -2px 3px #b00000;
+  /* animation:fadeInOut 5s forwards;  削除（start ボタンで開始するため） */
+}
+.welcome.start {
   animation:fadeInOut 5s forwards;
 }
+
+/* puzzle / number は .show-* クラスで開始 */
 .puzzle {
   display:inline-block; font-size:3em; opacity:0;
+  /* animation removed */
+}
+.puzzle.show {
   animation:showPuzzle 2s forwards, fadeOutPuzzle 2s forwards;
-  animation-delay:5s, 9s;
+  animation-delay:0s, 4s; /* show starts immediately when class added; fade out after 4s */
 }
 .number {
   display:inline-block; font-size:3em; opacity:0; margin-left:10px;
-  animation:slideNumber 2s forwards, fadeOutNumber 2s forwards; 
-  animation-delay:6s, 9s;
+  /* animation removed */
 }
+.number.show {
+  animation:slideNumber 2s forwards, fadeOutNumber 2s forwards;
+  animation-delay:1s, 4s; /* number shows 1s after puzzle */
+}
+
 /* ハンバーガーメニュー */
 .menu-btn {
   position:fixed; top:20px; right:20px;
@@ -65,9 +79,7 @@ body {
   display:none; flex-direction:column; padding-top:60px; align-items:center;
   z-index:5000;
 }
-.menu.active { display:flex; 
-　z-index:5000;
-}
+.menu.active { display:flex; z-index:5000; }
 .menu a { color:white; text-decoration:none; margin:20px 0; font-size:1.5em; }
 .menu .points {
   color: #ff0;
@@ -246,9 +258,66 @@ body {
 @keyframes slideNumber {0%{opacity:0;}100%{opacity:1;}}
 @keyframes fadeOutPuzzle {from{opacity:1;} to{opacity:0;}}
 @keyframes fadeOutNumber {from{opacity:1;} to{opacity:0;}}
+
+/* --- ポップアップ / スタートボタン --- */
+#popup {
+  position:fixed;
+  top:50%; left:50%;
+  transform:translate(-50%, -50%);
+  background:rgba(0,0,0,0.95);
+  background-color:white;
+  color:black;
+  padding:2em;
+  border-radius:15px;
+  text-align:center;
+  font-size:1.1em;
+  width:86%;
+  max-width:420px;
+  z-index:11000;
+  box-shadow:0 10px 30px rgba(0,0,0,0.6);
+}
+#popup h2 { margin-top:0; font-size:1.4em; }
+#popup p { margin:0.6em 0; line-height:1.5; }
+#popup button.close {
+  position:absolute;
+  top:10px; right:10px;
+  background:transparent; color:black;
+  border:none; border-radius:50%;
+  width:34px; height:34px;
+  cursor:pointer;
+  font-weight:bold;
+  font-size:1.2em;
+}
+#startBtn {
+  display:none;
+  position:fixed;
+  top:50%; left:50%;
+  transform:translate(-50%, -50%);
+  font-size:1.4em;
+  padding:0.9em 1.6em;
+  background:#f0f0f0;
+  color:black;
+  border:none;
+  border-radius:12px;
+  cursor:pointer;
+  z-index:10000;
+  box-shadow:0 6px 20px rgba(0,0,0,0.4);
+}
+#startBtn:active { transform:translate(-50%, -50%) scale(0.98); }
 </style>
 </head>
 <body>
+
+<!-- ポップアップ（最初に表示） -->
+<div id="popup" aria-hidden="false">
+  <button class="close" aria-label="閉じる">✕</button>
+  <h2>注意</h2>
+  <p>ページをリロードしないこと。</p>
+  <p>すみずみまで見ること。</p>
+</div>
+
+<!-- スタートボタン（ポップアップ閉じた後に表示） -->
+<button id="startBtn" aria-label="スタート">スタート</button>
 
 <div class="container" id="container">
   <div class="welcome">E-203</div>
@@ -314,7 +383,7 @@ body {
 
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script>
-// 元のゲームJSはそのまま
+// DOM要素取得
 const menuBtn=document.getElementById('menuBtn');
 const menu=document.getElementById('menu');
 const timerEl=document.getElementById('timer');
@@ -330,8 +399,12 @@ const container = document.getElementById('container');
 const pointsDiv = document.getElementById('points');
 const welcome = document.querySelector('.welcome');
 
+const popup = document.getElementById('popup');
+const popupCloseBtn = popup.querySelector('.close');
+const startBtn = document.getElementById('startBtn');
+
 let inputValue="";
-const answers = ["あいうえ", "かきくけ", "さしすせ"]; // ← 3問の答えを配列で管理
+const answers = ["かいぞく","あいうえ","かきくけ","さしすせ","たちつて","なにぬね","はひふへ","まみむめ","やゆよ"]; // ← 3問の答えを配列で管理
 let puzzleIndex = 1;
 const puzzleMax = answers.length;
 let isTimeup = false;
@@ -339,8 +412,58 @@ let solvedCount = 0;
 let timerInterval = null;
 let allPassed = false;
 
+/* ---- 初期化（ポップアップ表示はHTMLで表示済） ---- */
+
+// ポップアップの✕で閉じる -> スタートボタン表示
+popupCloseBtn.addEventListener('click', ()=>{
+  popup.style.display = 'none';
+  startBtn.style.display = 'block';
+});
+
+// スタートボタン押下 -> ゲーム開始シーケンス
+startBtn.addEventListener('click', ()=>{
+  startBtn.style.display = 'none';
+  beginIntroSequence();
+});
+
+// シーケンス制御：ウェルカム表示→MISSION表示→10秒後にUI表示（元の挙動を再現）
+function beginIntroSequence(){
+  // 1) ウェルカム（.welcome.start を付与してアニメーション開始）
+  if(welcome) {
+    welcome.classList.add('start');
+    // ウェルカムのアニメーション終了（5s）後に puzzle/number を表示する処理をトリガ
+    welcome.addEventListener('animationend', onWelcomeAnimationEnd, { once:true });
+  } else {
+    // ウェルカムがなければすぐに puzzle 表示
+    showPuzzleAndNumber();
+  }
+
+  // 2) 元の setTimeout と同じく、スタートから10秒後にキーボード・UI表示を行う
+  setTimeout(()=>{
+    if(isTimeup || allPassed) return;
+    menuBtn.style.opacity="1"; menuBtn.style.pointerEvents="auto";
+    timerEl.style.opacity="1";
+    puzzle2.style.opacity="1";
+    grid.style.opacity="1";
+    keyboard.classList.add('show');
+    startTimer(5*60,timerEl);
+  },10000);
+}
+
+function onWelcomeAnimationEnd(){
+  // ウェルカムが終わったらパズル/番号の表示アニメーションを開始
+  showPuzzleAndNumber();
+}
+
+function showPuzzleAndNumber(){
+  // puzzle と number に .show を付けてアニメーション開始（number は遅延内定義）
+  puzzleSpan.classList.add('show');
+  numberSpan.classList.add('show');
+}
+
+/* ---- 既存のゲーム処理 ---- */
 function setPuzzleTitle(idx) {
-  const marks = ["❶","❷","❸"];
+  const marks = ["❶","❷","❸","❹","❺","❻","❼","❽","❾"];
   puzzle2.textContent = "MISSION" + marks[idx-1];
   numberSpan.textContent = marks[idx-1];
 }
@@ -366,23 +489,13 @@ $('#keyboard_ok').on('click',()=>{
         allPassed = true;
         endAllPassed();
       }
-} else {
-    grid.classList.add("shake", "incorrect");  // ← ここに incorrect を追加
-    setTimeout(()=>grid.classList.remove("shake", "incorrect"),600);
-    inputValue="";
-    inputs.forEach(input=>input.value="");
-}
+  } else {
+      grid.classList.add("shake", "incorrect");  // ← ここに incorrect を追加
+      setTimeout(()=>grid.classList.remove("shake", "incorrect"),600);
+      inputValue="";
+      inputs.forEach(input=>input.value="");
+  }
 });
-
-// 10秒後にキーボード・UI表示
-setTimeout(()=>{
-  menuBtn.style.opacity="1"; menuBtn.style.pointerEvents="auto";
-  timerEl.style.opacity="1";
-  puzzle2.style.opacity="1";
-  grid.style.opacity="1";
-  keyboard.classList.add('show');
-  startTimer(5*60,timerEl);
-},10000);
 
 // メニュー
 menuBtn.addEventListener('click',()=>{
@@ -434,10 +547,12 @@ function endAllPassed() {
 }
 
 if (welcome) {
-  welcome.addEventListener('animationend', () => { welcome.style.display = 'none'; });
+  // ウェルカムの初回アニメーションは start ボタンで開始するので、
+  // アニメーション終了時の既存処理（非表示）は start 後に働くようにしてある
+  welcome.addEventListener('animationend', () => { welcome.style.display = 'none'; }, { once:true });
 }
 
-// フリックキーボード処理
+/* ---- フリックキーボード処理（元のまま） ---- */
 const l_word = [
 ['あ','い','う','え','お'], ['か','き','く','け','こ'], ['さ','し','す','せ','そ'],
 ['た','ち','つ','て','と'], ['な','に','ぬ','ね','の'], ['は','ひ','ふ','へ','ほ'],
@@ -514,16 +629,6 @@ $(document).on('touchstart','#kb_key_bs',function(e){
 $(document).on('touchend','#kb_key_switch,#kb_key_bs',function(e){
   $(e.currentTarget).removeClass('gray_for_touch');
 });
-</script>
-<script>
-let lastTouchEnd = 0;
-document.addEventListener('touchend', function (event) {
-  let now = Date.now();
-  if (now - lastTouchEnd <= 300) {
-    event.preventDefault(); // ダブルタップズーム防止
-  }
-  lastTouchEnd = now;
-}, false);
 </script>
 </body>
 </html>
