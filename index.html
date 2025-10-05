@@ -272,7 +272,7 @@ body {
   text-align:center;
   font-size:1.1em;
   width:86%;
-  max-width:420px;
+  max-width:50vw;
   z-index:11000;
   box-shadow:0 10px 30px rgba(0,0,0,0.6);
 }
@@ -404,7 +404,7 @@ const popupCloseBtn = popup.querySelector('.close');
 const startBtn = document.getElementById('startBtn');
 
 let inputValue="";
-const answers = ["かいぞく","あいうえ","かきくけ","さしすせ","たちつて","なにぬね","はひふへ","まみむめ","やゆよ"]; // ← 3問の答えを配列で管理
+const answers = ["いるか","すいしゃ","やくそく","くろひげ","かいぞく","とうだい","うみがめ","ぺんぎん","にんじん","うなぎ","なつ","みてい"]; // ← 3問の答えを配列で管理
 let puzzleIndex = 1;
 const puzzleMax = answers.length;
 let isTimeup = false;
@@ -463,7 +463,7 @@ function showPuzzleAndNumber(){
 
 /* ---- 既存のゲーム処理 ---- */
 function setPuzzleTitle(idx) {
-  const marks = ["❶","❷","❸","❹","❺","❻","❼","❽","❾"];
+  const marks = ["❶","❷","❸","❹","❺","❻","❼","❽","❾","➓","❶❶","❶❷"];
   puzzle2.textContent = "MISSION" + marks[idx-1];
   numberSpan.textContent = marks[idx-1];
 }
@@ -502,7 +502,7 @@ menuBtn.addEventListener('click',()=>{
   menuBtn.classList.toggle('active');
   menu.classList.toggle('active');
   if(isTimeup || allPassed) {
-    pointsDiv.textContent = `ポイント: ${solvedCount * 100}`;
+    pointsDiv.textContent = `ポイント: ${solvedCount * 10}`;
     pointsDiv.style.display = "block";
   } else pointsDiv.style.display = "none";
 });
