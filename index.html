@@ -21,7 +21,7 @@ body {
     -khtml-user-select: none;
 
     /* 背景画像に変更（修正済） */
-    background: black; url('images/underwater.jpg') no-repeat center center fixed;
+    background: black url('images/underwater.jpg') no-repeat center center fixed;
     background-size: cover;
     color: white;
 
@@ -68,6 +68,7 @@ body {
   width:24px; height:20px;
   display:flex; flex-direction:column; justify-content:space-around;
   cursor:pointer; opacity:0; pointer-events:none; transition:opacity 1s ease;
+  z-index:12001;
 }
 .menu-btn span { display:block; height:3px; background:white; border-radius:2px; transition:0.4s; }
 .menu-btn.active span:nth-child(1) { transform:rotate(45deg) translate(5px,5px); }
@@ -90,27 +91,6 @@ body {
   padding-top: 10px;
   text-align: center;
   display: none;
-}
-
-#mapOverlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: rgba(0,0,0,0.8);
-  display: none;
-  justify-content: center;
-  align-items: center;
-  z-index: 9999;
-}
-
-#mapOverlay img {
-  max-width: 90%;
-  max-height: 90%;
-  border: 3px solid white;
-  border-radius: 8px;
-  box-shadow: 0 0 20px rgba(255,255,255,0.4);
 }
 
 /* タイマー */
@@ -325,12 +305,37 @@ body {
   box-shadow:0 6px 20px rgba(0,0,0,0.4);
 }
 #startBtn:active { transform:translate(-50%, -50%) scale(0.98); }
+
+/* --- マップオーバーレイ --- */
+#mapOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0,0,0,0.75);
+  display: none;
+  justify-content: center;
+  align-items: center;
+  z-index:10500; /* popup(11000) より下、startBtn(10000)より上 */
+}
+#mapOverlay img {
+  max-width: 90%;
+  max-height: 90%;
+  border: 3px solid white;
+  border-radius: 8px;
+  box-shadow: 0 0 20px rgba(255,255,255,0.4);
+  background: #000;
+}
+
+/* small-screen: 画像の余白を増やす */
+@media (max-width:600px) {
+  #mapOverlay img { max-width: 95%; max-height: 85%; }
+}
 </style>
 </head>
 <body>
-<div id="mapOverlay">
-  <img src="" alt="Map">
-</div>
+
 <!-- ポップアップ（最初に表示） -->
 <div id="popup" aria-hidden="false">
   <button class="close" aria-label="閉じる">✕</button>
@@ -395,14 +400,20 @@ body {
 <div id="timeup-message">TIME UP</div>
 
 <div class="menu" id="menu">
-  <a href="#">ホーム</a>
-  <a href="#">マップ</a>
-  <a href="#">設計図</a>
+  <a href="#" id="homeLink">ホーム</a>
+  <!-- マップに id を追加 -->
+  <a href="#" id="mapBtn">マップ</a>
+  <a href="#" id="blueprintLink">設計図</a>
   <div class="points" id="points"></div>
 </div>
 
 <div class="menu-btn" id="menuBtn"><span></span><span></span><span></span></div>
 <div class="timer" id="timer">05:00</div>
+
+<!-- マップオーバーレイ -->
+<div id="mapOverlay" aria-hidden="true">
+  <img src="" alt="Map" id="mapImg">
+</div>
 
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script>
@@ -426,14 +437,36 @@ const popup = document.getElementById('popup');
 const popupCloseBtn = popup.querySelector('.close');
 const startBtn = document.getElementById('startBtn');
 
+const mapOverlay = document.getElementById('mapOverlay');
+const mapImg = document.getElementById('mapImg');
+const mapBtn = document.getElementById('mapBtn');
+
 let inputValue="";
-const answers = ["いるか","すいしゃ","やくそく","くろひげ","かいぞく","とうだい","うみがめ","ぺんぎん","にんじん","うなぎ","なつ","みてい"]; // ← 3問の答えを配列で管理
+const answers = ["いるか","すいしゃ","やくそく","くろひげ","かいぞく","とうだい","うみがめ","ぺんぎん","にんじん","うなぎ","なつ","みてい"]; // ← 12問
 let puzzleIndex = 1;
 const puzzleMax = answers.length;
 let isTimeup = false;
 let solvedCount = 0;
 let timerInterval = null;
 let allPassed = false;
+
+/* ---- マップ画像の配列（MISSION番号 = puzzleIndex） ---- */
+/* ここを実際の画像パスに合わせて編集してください */
+const mapImages = [
+  "images/map1.jpg",  // MISSION 1
+  "images/map2.jpg",  // MISSION 2
+  "images/map3.jpg",  // MISSION 3
+  "images/map4.jpg",  // MISSION 4
+  "images/map5.jpg",  // MISSION 5
+  "images/map6.jpg",  // MISSION 6
+  "images/map7.jpg",  // MISSION 7
+  "images/map8.jpg",  // MISSION 8
+  "images/map9.jpg",  // MISSION 9
+  "images/map10.jpg", // MISSION 10
+  "images/map11.jpg", // MISSION 11
+  "images/map12.jpg"  // MISSION 12
+];
+let mapVisible = false;
 
 /* ---- 初期化（ポップアップ表示はHTMLで表示済） ---- */
 
@@ -520,17 +553,67 @@ $('#keyboard_ok').on('click',()=>{
   }
 });
 
-// メニュー
+// メニュー（ハンバーガー）
+// ここでマップオーバーレイも閉じるようにする
 menuBtn.addEventListener('click',()=>{
   menuBtn.classList.toggle('active');
   menu.classList.toggle('active');
+  // メニュー押下でマップが出ていれば閉じる
+  if(mapVisible){
+    hideMapOverlay();
+  }
   if(isTimeup || allPassed) {
     pointsDiv.textContent = `ポイント: ${solvedCount * 10}`;
     pointsDiv.style.display = "block";
   } else pointsDiv.style.display = "none";
 });
 
-// タイマー
+// マップ表示 / 非表示制御関数
+function showMapOverlay(){
+  // puzzleIndex は 1始まりなので -1
+  const idx = Math.max(0, Math.min(puzzleIndex - 1, mapImages.length - 1));
+  const url = mapImages[idx] || "";
+  if(url === ""){
+    // 画像未指定なら何もしない（またはデフォルト画像を入れる）
+    console.warn("Map image not set for this mission index:", idx);
+    return;
+  }
+  mapImg.src = url;
+  mapOverlay.style.display = "flex";
+  mapOverlay.setAttribute('aria-hidden', 'false');
+  mapVisible = true;
+}
+
+function hideMapOverlay(){
+  mapOverlay.style.display = "none";
+  mapOverlay.setAttribute('aria-hidden', 'true');
+  // 画像を空にするとメモリ節約になることもあります
+  // mapImg.src = "";
+  mapVisible = false;
+}
+
+// メニュ内の「マップ」クリック
+mapBtn.addEventListener('click', (e)=>{
+  e.preventDefault();
+  // toggle
+  if(mapVisible){
+    hideMapOverlay();
+  } else {
+    showMapOverlay();
+  }
+});
+
+// マップオーバーレイ自体をタップで閉じる
+mapOverlay.addEventListener('click', ()=>{
+  if(mapVisible) hideMapOverlay();
+});
+
+// ESCキーで閉じる（ユーザビリティ向上）
+document.addEventListener('keydown', (e)=>{
+  if(e.key === "Escape" && mapVisible) hideMapOverlay();
+});
+
+/* ---- タイマー ---- */
 function startTimer(duration,display){
   let timer=duration;
   timerInterval = setInterval(()=>{
@@ -602,8 +685,10 @@ $(document).on('touchstart', '.kb_key:not(.no_flick)', function(e){
   $('.kb_key_l').offset({top:offset.top,left:offset.left-48});
   $('.kb_key_r').offset({top:offset.top,left:offset.left+48});
   let l = l_word.find(x=>x.includes($(e.currentTarget).text()));
-  $('.kb_key_u').text(l[2]); $('.kb_key_d').text(l[4]);
-  $('.kb_key_l').text(l[1]); $('.kb_key_r').text(l[3]);
+  if(l){
+    $('.kb_key_u').text(l[2]); $('.kb_key_d').text(l[4]);
+    $('.kb_key_l').text(l[1]); $('.kb_key_r').text(l[3]);
+  }
 });
 $(document).on('touchmove', '.kb_key:not(.no_flick)', function(e){
   direction='c';
@@ -625,6 +710,7 @@ $(document).on('touchend', '.kb_key:not(.no_flick)', function(e){
   let key=$(e.currentTarget).text();
   let l = l_word.find(x=>x.includes(key));
   let idx = direction=='c'?0:direction=='u'?2:direction=='d'?4:direction=='l'?1:3;
+  if(!l) return;
   if(l[idx]=='') return;
   if(inputValue.length<4){
     inputValue+=l[idx];
@@ -651,48 +737,6 @@ $(document).on('touchstart','#kb_key_bs',function(e){
 });
 $(document).on('touchend','#kb_key_switch,#kb_key_bs',function(e){
   $(e.currentTarget).removeClass('gray_for_touch');
-});
-// MISSION番号ごとのマップ画像URL
-const mapImages = [
-  "黒 白 イラスト 手 重量挙げ バッジ 健康とフィットネス スポーツクラブのロゴ - 4.png",
-  "images/map2.jpg",
-  "images/map3.jpg",
-  "images/map4.jpg",
-  "images/map5.jpg",
-  "images/map6.jpg",
-  "images/map7.jpg",
-  "images/map8.jpg",
-  "images/map9.jpg",
-  "images/map10.jpg",
-  "images/map11.jpg",
-  "images/map12.jpg"
-];
-
-// マップ表示制御
-const mapOverlay = $("#mapOverlay");
-const mapImage = $("#mapOverlay img");
-
-let mapVisible = false;
-
-$("#mapBtn").on("click", function() {
-  if (!mapVisible) {
-    // 現在のMISSION番号に対応するマップ画像を表示
-    const currentMission = currentPuzzle; // 0始まり
-    const imageUrl = mapImages[currentMission] || mapImages[0];
-    mapImage.attr("src", imageUrl);
-    mapOverlay.fadeIn(300);
-    mapVisible = true;
-  } else {
-    // 再クリックで非表示
-    mapOverlay.fadeOut(300);
-    mapVisible = false;
-  }
-});
-
-// ハンバーガーメニューを閉じるときもマップ非表示
-$("#menuBtn").on("click", function() {
-  mapOverlay.fadeOut(300);
-  mapVisible = false;
 });
 </script>
 </body>
