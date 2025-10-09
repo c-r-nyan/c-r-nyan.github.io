@@ -332,6 +332,28 @@ body {
 @media (max-width:600px) {
   #mapOverlay img { max-width: 95%; max-height: 85%; }
 }
+
+/* 設計図オーバーレイ */
+#blueprintOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0,0,0,0.75);
+  display: none;
+  justify-content: center;
+  align-items: center;
+  z-index: 10500;
+}
+#blueprintOverlay img {
+  max-width: 90%;
+  max-height: 90%;
+  border: 3px solid white;
+  border-radius: 8px;
+  box-shadow: 0 0 20px rgba(255,255,255,0.4);
+  background: #000;
+}
 </style>
 </head>
 <body>
@@ -414,6 +436,10 @@ body {
 <div id="mapOverlay" aria-hidden="true">
   <img src="" alt="Map" id="mapImg">
 </div>
+<!-- 設計図オーバーレイ -->
+<div id="blueprintOverlay">
+  <img src="" alt="Blueprint" id="blueprintImg">
+</div>
 
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script>
@@ -467,6 +493,61 @@ const mapImages = [
   "images/map12.jpg"  // MISSION 12
 ];
 let mapVisible = false;
+// 追加取得
+const blueprintOverlay = document.getElementById('blueprintOverlay');
+const blueprintImg = document.getElementById('blueprintImg');
+const blueprintLink = document.getElementById('blueprintLink');
+
+// 設計図画像の配列（MISSION番号に対応）
+const blueprintImages = [
+  "images/blueprint1.jpg",
+  "images/blueprint2.jpg",
+  "images/blueprint3.jpg",
+  "images/blueprint4.jpg",
+  "images/blueprint5.jpg",
+  "images/blueprint6.jpg",
+  "images/blueprint7.jpg",
+  "images/blueprint8.jpg",
+  "images/blueprint9.jpg",
+  "images/blueprint10.jpg",
+  "images/blueprint11.jpg",
+  "images/blueprint12.jpg"
+];
+
+let blueprintVisible = false;
+
+// 表示・非表示関数
+function showBlueprintOverlay() {
+  const idx = Math.max(0, Math.min(puzzleIndex - 1, blueprintImages.length - 1));
+  blueprintImg.src = blueprintImages[idx];
+  blueprintOverlay.style.display = "flex";
+  blueprintVisible = true;
+}
+function hideBlueprintOverlay() {
+  blueprintOverlay.style.display = "none";
+  blueprintVisible = false;
+}
+
+// 設計図ボタン挙動
+blueprintLink.addEventListener('click', (e) => {
+  e.preventDefault();
+  if (mapVisible) hideMapOverlay(); // マップが出ていたら閉じる
+  if (blueprintVisible) {
+    hideBlueprintOverlay();
+  } else {
+    showBlueprintOverlay();
+  }
+});
+
+// オーバーレイクリックで閉じる
+blueprintOverlay.addEventListener('click', () => {
+  if (blueprintVisible) hideBlueprintOverlay();
+});
+
+// ハンバーガーメニュー押下時にも閉じる
+menuBtn.addEventListener('click', () => {
+  if (blueprintVisible) hideBlueprintOverlay();
+});
 
 /* ---- 初期化（ポップアップ表示はHTMLで表示済） ---- */
 
